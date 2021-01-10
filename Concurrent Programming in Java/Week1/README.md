@@ -189,5 +189,5 @@ Output:
     Thread 1: Locked resource 1
     
 ### Further reading:
-- Wikipedia article on [Threads](https://en.wikipedia.org/wiki/Thread_(computing)
+- Wikipedia article on [Threads](https://en.wikipedia.org/wiki/Thread_(computing) "Threads")
 - [Java documentation on Thread class](https://docs.oracle.com/javase/8/docs/api/java/lang/Thread.html "Java documentation on Thread class")
