@@ -187,3 +187,7 @@ Output:
     Started: Thread 1
     Thread 2: Locked resource 2
     Thread 1: Locked resource 1
+    
+### Further reading:
+- Wikipedia article on [Threads](https://en.wikipedia.org/wiki/Thread_(computing)
+- [Java documentation on Thread class](https://docs.oracle.com/javase/8/docs/api/java/lang/Thread.html "Java documentation on Thread class")
