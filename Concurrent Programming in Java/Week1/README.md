@@ -1,0 +1,189 @@
+# Java Threads
+
+**Lecture Summary**: In this lecture, we learned the concept of threads as lower-level building blocks for concurrent programs. A unique aspect of Java compared to prior mainstream programming languages is that Java included the notions of threads (as instances of the `java.lang.Thread` class) in its language definition right from the start.
+
+When an instance of `Thread` is created (via a `new` operation), it does not start executing right away; instead, it can only start executing when its `start()` method is invoked. The statement or computation to be executed by the thread is specified as a parameter to the constructor.
+
+The Thread class also includes a wait operation in the form of a `join()` method. If thread `t0` performs a `t1.join()` call, thread `t0` will be forced to wait until thread `t1` completes, after which point it can safely access any values computed by thread `t1`. Since there is no restriction on which thread can perform a `join` on which other thread, it is possible for a programmer to erroneously create a deadlock cycle with `join` operations. (A deadlock occurs when two threads wait for each other indefinitely, so that neither can make any progress.)
+
+The `Thread` class also defines a number of methods for thread management. These include `static` methods which include information about, or affect the status of, the thread invoking the method. There are other non-static methods as well which are invoked from other threads involved in managing the thread and the `Thread` object.
+
+### Defining and starting a thread
+An application that creates an instance of `Thread` must also provide the code that executes within that thread. There are two ways to provide the code for execution:
+- By implementing the `Runnable` interface.
+
+```java
+// Example illustrating thread creation and task execution by implementing java.lang.Runnable interface.
+
+public class MyTask implements Runnable {
+    public void run() {
+        System.out.println("Hello from a thread! (Running MyTask implementing java.lang.Runnable)");
+    }
+
+    public static void main(String args[]) {
+        Thread t0 = new Thread(new MyTask());
+        t0.start();
+    }
+};
+```
+
+Output:
+
+	Hello from a thread! (Running MyTask implementing java.lang.Runnable)
+  
+  
+- By extending the `Thread` class
+
+`java.lang.Thread` itself implements `java.lang.Runnable`, but its `run()` method does nothing. A class which subclasses `java.lang.Thread` can implement its own `run()` method.
+
+```java
+// Example illustrating the thread creation and task execution by extending java.lang.Thread class and overriding it's run() method.
+
+public class MyThread extends Thread {
+    @Override
+    public void run() {
+        System.out.println("Hello from MyThread! (Extended from java.lang.Thread)");
+    }
+
+    public static void main(String args[]) {
+        Thread t0 = new MyThread();
+        t0.start();
+    }
+};
+```
+
+Output:
+
+	Hello from MyThread! (Extended from java.lang.Thread)
+
+
+
+### Waiting on a thread
+
+`join()` method is used when a thread wants another thread to finish executing before the calling thread can proceed further. A thread `t0` which invokes the `join` operation on another thread `t1` is said to be waiting on `t1`.
+
+```java
+// Example illustrating the use of join() method of java.lang.Thread class
+
+public class MyThread {
+
+    public static void main(String args[]) {
+        Thread t1 = new Thread(new MyTask(), "Thread 1");
+        Thread t2 = new Thread(new MyTask(), "Thread 2");
+
+        // Start t1 immediately
+         t1.start();
+         try {
+             t1.join();
+         } catch (InterruptedException ie) {
+             ie.printStackTrace();
+         }
+
+         // Start t2 once t1 has finished execution
+         t2.start();
+         try {
+             t2.join();
+         } catch (InterruptedException ie) {
+             ie.printStackTrace();
+         }
+
+         System.out.println("Both threads finished execution");
+    }
+};
+
+class MyTask implements Runnable {
+
+    @Override
+    public void run() {
+        Thread t = Thread.currentThread();
+        System.out.println("Thread started: " + t.getName());
+        try {
+            Thread.sleep(1000);
+        } catch (InterruptedException ie) {
+            ie.printStackTrace();
+        }
+        System.out.println("Thread ended: " + t.getName());
+    }
+};
+```
+Output:
+
+    Thread started: Thread 1
+    Thread ended: Thread 1
+    Thread started: Thread 2
+    Thread ended: Thread 2
+    Both threads finished execution
+
+
+### Deadlock
+Deadlock is a condition in which two (or more) threads cannot make progress because one thread is holding a resource and is waiting for another resource which is held by another waiting process. 
+
+```java
+// Example illustrating deadlock situation
+
+public class Deadlock {
+    static String resource1 = "resource1";
+    static String resource2 = "resource2";
+
+    public static void main(String args[]) {
+        // t1 first tries to lock resource1 and then resource2
+        Thread t1 = new Thread("Thread 1") {
+            public void run() {
+                System.out.println("Started: " + Thread.currentThread().getName());
+                synchronized (resource1) {
+                    System.out.println(Thread.currentThread().getName() + ": Locked resource 1");
+                    try {
+                        Thread.sleep(1000);
+                    } catch (InterruptedException ie) {
+                        ie.printStackTrace();
+                    }
+
+                    synchronized (resource2) {
+                        System.out.println(Thread.currentThread().getName() + ": Locked resource 2");
+                        try {
+                            Thread.sleep(1000);
+                        } catch (InterruptedException ie) {
+                            ie.printStackTrace();
+                        }
+                    }
+                }
+                System.out.println("Ended: Thread 1");
+            }
+        };
+
+        //t2 first tries to lock resource2 and then resource1
+        Thread t2 = new Thread("Thread 2") {
+            public void run() {
+                System.out.println("Started: " + Thread.currentThread().getName());
+                synchronized (resource2) {
+                    System.out.println(Thread.currentThread().getName() + ": Locked resource 2");
+                    try {
+                        Thread.sleep(1000);
+                    } catch (InterruptedException ie) {
+                        ie.printStackTrace();
+                    }
+
+                    synchronized (resource1) {
+                        System.out.println(Thread.currentThread().getName() + ": Locked resource 1");
+                        try {
+                            Thread.sleep(1000);
+                        } catch (InterruptedException ie) {
+                            ie.printStackTrace();
+                        }
+                    }
+                }
+                System.out.println("Ended: Thread 1");
+            }
+        };
+
+        t1.start();
+        t2.start();
+    }
+}
+```
+Output:
+
+    Started: Thread 2
+    Started: Thread 1
+    Thread 2: Locked resource 2
+    Thread 1: Locked resource 1
