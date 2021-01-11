@@ -340,3 +340,124 @@ Output:
 
 	Counter value (actual): 5 Counter value (expected): 5
 
+### wait() and notify()
+
+### Producer-Consumer example
+```java
+// Example producer-consumer program
+
+public class ProducerConsumer {
+
+    public static void main(String[] args) {
+        Buffer buf = new Buffer();
+        Thread producer = new Producer(buf);
+        Thread consumer = new Consumer(buf);
+    
+        producer.start();
+        consumer.start();
+    }
+};
+
+class Buffer {
+    private static final int MAX_BUFFER_LENGTH = 5;
+    private String[] messages;
+    private int in;
+    private int out;
+    private int n_elem;
+
+    public Buffer() {
+        this.messages = new String[MAX_BUFFER_LENGTH];
+        this.in = 0;
+        this.out = 0;
+        this.n_elem = 0;
+    }
+
+    public synchronized void insert(String message) {
+        while(n_elem >= MAX_BUFFER_LENGTH) {
+            try {
+                wait();
+            } catch (InterruptedException ie) {
+                // Do nothing
+            }
+        }
+
+        messages[in] = message;
+        in = (in + 1) % MAX_BUFFER_LENGTH;
+        n_elem++;
+        notifyAll();
+    }
+
+    public synchronized String remove() {
+        while(n_elem <= 0) {
+            try {
+                wait();
+            } catch (InterruptedException ex) {
+                // Do nothing
+            }
+        }
+
+        String msg = messages[out];
+        out = (out + 1) % MAX_BUFFER_LENGTH;
+        n_elem--;
+        notifyAll();
+        return msg;
+    }
+
+};
+
+class Producer extends Thread {
+    private Buffer buf;
+
+    public Producer(Buffer buf) {
+        this.buf = buf;
+    }
+
+    @Override
+    public void run() {
+        String[] messages = {"I", "am", "a", "producer", "thread", "and", "my", "task", "is", "to", "produce", "strings", "DONE"};
+        for(int i = 0; i < messages.length; i++) {
+            buf.insert(messages[i]);
+            try {
+                Thread.sleep(100);
+            } catch (InterruptedException ie) {
+                ie.printStackTrace();
+            }
+        }
+    }
+};
+
+class Consumer extends Thread {
+    private Buffer buf;
+
+    public Consumer(Buffer buf) {
+        this.buf = buf;
+    }
+
+    @Override
+    public void run() {
+        for(String message = buf.remove(); !message.equals("DONE"); message = buf.remove()) {
+            System.out.println("RECEIVED: " + message);
+            try {
+                Thread.sleep(100);
+            } catch (InterruptedException ie) {
+                ie.printStackTrace();
+            }
+        }
+    }
+};
+```
+Output:
+
+    RECEIVED: I
+    RECEIVED: am
+    RECEIVED: a
+    RECEIVED: producer
+    RECEIVED: thread
+    RECEIVED: and
+    RECEIVED: my
+    RECEIVED: task
+    RECEIVED: is
+    RECEIVED: to
+    RECEIVED: produce
+    RECEIVED: strings
+```
