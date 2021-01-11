@@ -1,4 +1,4 @@
-# Java Threads
+# 1. Java Threads
 
 **Lecture Summary**: In this lecture, we learned the concept of threads as lower-level building blocks for concurrent programs. A unique aspect of Java compared to prior mainstream programming languages is that Java included the notions of threads (as instances of the `java.lang.Thread` class) in its language definition right from the start.
 
@@ -191,3 +191,152 @@ Output:
 ### Further reading:
 - Wikipedia article on [Threads](https://en.wikipedia.org/wiki/Thread_(computing) "Threads")
 - [Java documentation on Thread class](https://docs.oracle.com/javase/8/docs/api/java/lang/Thread.html "Java documentation on Thread class")
+
+<br>
+<br>
+
+# 2. Structured Locks
+
+**Lecture Summary**: In this lecture, we learned about structured locks, and how they can be implemented using `synchronized` statements and methods in Java. Structured locks can be used to enforce mutual exclusion and avoid data races, as illustrated by the `incr()` method in the `A.count` example, and the `insert()` and `remove()` methods in the the `Buffer` example. A major benefit of structured locks is that their *acquire* and *release* operations are implicit, since these operations are automatically performed by the Java runtime environment when entering and exiting the scope of a `synchronized` statement or method, even if an exception is thrown in the middle.
+
+We also learned about `wait()` and `notify()` operations that can be used to block and resume threads that need to wait for specific conditions. For example, a producer thread performing an `insert()` operation on a bounded buffer can call `wait()` when the buffer is full, so that it is only unblocked when a consumer thread performing a `remove()` operation calls `notify()`. Likewise, a consumer thread performing a `remove()` operation on a bounded buffer can call `wait()` when the buffer is empty, so that it is only unblocked when a producer thread performing an `insert()` operation calls `notify()`. Structured locks are also referred to as  *intrinsic locks* or *monitors*.
+
+### Data race
+A data race is a condition in which two or more threads concurrently access a shared memory location and atleast one of the accesses is for writing, and the threads are not using any exclusive locks for controlling their accesses to that memory location.
+
+```java
+// Example illustrating data race.
+
+public class DataRace {
+
+    private static final int MAX_THREADS = 5;
+    public static void main(String args[]) {
+        MyCounter counter = new MyCounter();
+        Thread[] threads = new Thread[MAX_THREADS];
+        for(int i = 0; i < MAX_THREADS; i++) {
+            threads[i] = new Thread(new MyTask(counter));
+            threads[i].start();
+        }
+        for(int i = 0; i < MAX_THREADS; i++) {
+            try {
+                threads[i].join();
+            } catch (InterruptedException ie) {
+                ie.printStackTrace();
+            }
+        }
+
+        System.out.println("Counter value (actual): " + counter.getValue() + " Counter value (expected): " + MAX_THREADS);
+    }
+};
+
+class MyCounter {
+    private int counter = 0;
+
+    public void increment() {
+        this.counter++;
+    }
+
+    public int getValue() {
+        return this.counter;
+    }
+}
+
+class MyTask implements Runnable {
+    private MyCounter counter;
+    
+    public MyTask(MyCounter counter) {
+        this.counter = counter;
+    }
+
+    @Override
+    public void run() {
+        try {
+            Thread.sleep(10);
+        } catch (InterruptedException ie) {
+            ie.printStackTrace();
+        }
+        this.counter.increment();
+    }
+};
+```
+
+Output:
+
+	Counter value (actual): 3 Counter value (expected): 5
+
+### Synchronized construct 
+The `synchronized` construct ensures that no two threads execute the synchronized block at the same time. Any accesses to the resource on which the synchronized construct is placed happen in mutual exclusion.
+
+Syntax:
+
+    synchronized (Object resource) {
+    	// Some computation on the shared resource
+    }
+
+The `synchronized` construct is responsible for acquiring the lock on the shared resource before entering the `synchronized` block and releasing the lock upon exiting the block. It also provides a guarantee of lock release even when an exception occurs inside the synchronized block.
+
+The above data race condition can be prevented by synchronizing the accesses to the shared resource `counter` as follows:
+
+```java
+// Example illustrating the use of synchronized blocks to prevent data race.
+
+public class DataRace {
+
+    private static final int MAX_THREADS = 5;
+    public static void main(String args[]) {
+        MyCounter counter = new MyCounter();
+        Thread[] threads = new Thread[MAX_THREADS];
+        for(int i = 0; i < MAX_THREADS; i++) {
+            threads[i] = new Thread(new MyTask(counter));
+            threads[i].start();
+        }
+        for(int i = 0; i < MAX_THREADS; i++) {
+            try {
+                threads[i].join();
+            } catch (InterruptedException ie) {
+                ie.printStackTrace();
+            }
+        }
+
+        System.out.println("Counter value (actual): " + counter.getValue() + " Counter value (expected): " + MAX_THREADS);
+    }
+};
+
+class MyCounter {
+    private int counter = 0;
+
+    public void increment() {
+        synchronized (this) {
+            this.counter++;
+        }
+    }
+
+    public int getValue() {
+        return this.counter;
+    }
+}
+
+class MyTask implements Runnable {
+    
+    private MyCounter counter;
+    
+    public MyTask(MyCounter counter) {
+        this.counter = counter;
+    }
+
+    @Override
+    public void run() {
+        try {
+            Thread.sleep(10);
+        } catch (InterruptedException ie) {
+            ie.printStackTrace();
+        }
+        this.counter.increment();
+    }
+};
+```
+
+Output:
+
+	Counter value (actual): 5 Counter value (expected): 5
+
